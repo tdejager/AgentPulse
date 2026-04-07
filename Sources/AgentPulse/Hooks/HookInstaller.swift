@@ -4,7 +4,7 @@ import Foundation
 /// Pure Swift — uses FileManager and JSONSerialization to manage files.
 enum HookInstaller {
     private static let hookScriptPath = NSHomeDirectory() + "/.claude/hooks/agentpulse-hook.sh"
-    private static let settingsPath = NSHomeDirectory() + "/.claude/settings.local.json"
+    private static let settingsPath = NSHomeDirectory() + "/.claude/settings.json"
 
     private static let hookEvents = [
         "SessionStart", "Stop", "PermissionRequest", "UserPromptSubmit", "Notification"
