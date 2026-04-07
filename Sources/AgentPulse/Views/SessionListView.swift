@@ -21,6 +21,16 @@ struct SessionListView: View {
                     sessionList
                 }
             }
+
+            // Build info footer
+            HStack {
+                Text("Build: \(buildCommit)")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.quaternary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
         }
         .frame(minWidth: 380, minHeight: 250)
         .onAppear {
