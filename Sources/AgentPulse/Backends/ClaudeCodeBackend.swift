@@ -88,7 +88,7 @@ final class ClaudeCodeBackend: AgentBackend, @unchecked Sendable {
         )
     }
 
-    private func deriveJSONLPath(cwd: String, sessionId: String) -> String {
+    func deriveJSONLPath(cwd: String, sessionId: String) -> String {
         let encoded = cwd.replacingOccurrences(of: "/", with: "-")
         return "\(projectsDirectory)/\(encoded)/\(sessionId).jsonl"
     }

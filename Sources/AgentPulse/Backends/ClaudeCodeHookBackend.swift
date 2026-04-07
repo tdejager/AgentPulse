@@ -11,6 +11,9 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     private var trackedSessions: [String: TrackedSession] = [:]
     private let syncQueue = DispatchQueue(label: "hook-backend-sync")
 
+    /// JSONL-based analyzer for sessions discovered via file scan (no hook events yet).
+    private let jsonlFallback = ClaudeCodeBackend()
+
     struct TrackedSession {
         let id: String
         var pid: Int32
@@ -18,6 +21,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         let startedAt: Date
         var state: SessionState
         var lastActivity: Date
+        var hasReceivedHookEvent: Bool
     }
 
     /// Called by the HookServer when a hook event arrives.
@@ -35,6 +39,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         if var session = trackedSessions[sessionId] {
             session.state = state
             session.lastActivity = Date()
+            session.hasReceivedHookEvent = true
             trackedSessions[sessionId] = session
         } else if event.eventName == "SessionStart" || !sessionId.isEmpty {
             // New session discovered via hook
@@ -44,7 +49,8 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
                 cwd: event.cwd,
                 startedAt: Date(),
                 state: state,
-                lastActivity: Date()
+                lastActivity: Date(),
+                hasReceivedHookEvent: true
             )
         }
     }
@@ -98,6 +104,8 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
             guard ProcessProbe.isAlive(pid: tracked.pid) || tracked.pid == 0 else {
                 return nil
             }
+            // Include JSONL path in metadata for fallback state analysis
+            let jsonlPath = jsonlFallback.deriveJSONLPath(cwd: tracked.cwd, sessionId: tracked.id)
             return DiscoveredSession(
                 id: tracked.id,
                 pid: tracked.pid,
@@ -105,18 +113,31 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
                 startedAt: tracked.startedAt,
                 backendName: name,
                 iconName: iconName,
-                metadata: ["source": "hooks"]
+                metadata: [
+                    "source": tracked.hasReceivedHookEvent ? "hooks" : "file-scan",
+                    "jsonlPath": jsonlPath,
+                ]
             )
         }
     }
 
     func analyzeState(for session: DiscoveredSession) async throws -> SessionState {
-        let state = syncQueue.sync { trackedSessions[session.id]?.state ?? .idle }
-        return state
+        let tracked = syncQueue.sync { trackedSessions[session.id] }
+        // If this session hasn't received any hook events yet (pre-existing session),
+        // fall back to JSONL-based state analysis
+        if let tracked, !tracked.hasReceivedHookEvent {
+            return try await jsonlFallback.analyzeState(for: session)
+        }
+        return tracked?.state ?? .idle
     }
 
     func watchPath(for session: DiscoveredSession) -> String? {
-        nil // Push-based, no file watching needed
+        // For sessions without hook events, watch the JSONL file
+        let hasHookEvents = syncQueue.sync { trackedSessions[session.id]?.hasReceivedHookEvent ?? false }
+        if !hasHookEvents {
+            return jsonlFallback.watchPath(for: session)
+        }
+        return nil
     }
 
     func isAlive(session: DiscoveredSession) -> Bool {
@@ -149,7 +170,8 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
                     cwd: cwd,
                     startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
                     state: .active,
-                    lastActivity: Date()
+                    lastActivity: Date(),
+                    hasReceivedHookEvent: false
                 )
             }
         }
