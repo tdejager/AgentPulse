@@ -19,18 +19,23 @@ enum TerminalFocuser {
 
         let ghosttyPid = ghostty.processIdentifier
 
+        // Hide AgentPulse first so it doesn't steal focus back
+        NSApp.hide(nil)
+
         // Find which tab this session is in by mapping PID → TTY → tab index
         if let tabIndex = findTabIndex(sessionPid: session.pid, terminalPid: ghosttyPid) {
             logDebug("Session is in tab \(tabIndex + 1)")
-            // Activate Ghostty first, then switch tab
-            ghostty.activate()
-            // Small delay to ensure Ghostty is foreground before sending keystroke
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                switchToTab(tabIndex + 1) // goto_tab is 1-indexed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                ghostty.activate()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    switchToTab(tabIndex + 1)
+                }
             }
         } else {
             logDebug("Could not determine tab index, just activating Ghostty")
-            ghostty.activate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                ghostty.activate()
+            }
         }
     }
 
