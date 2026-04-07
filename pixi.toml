@@ -1,0 +1,36 @@
+[workspace]
+name = "AgentPulse"
+version = "0.1.0"
+description = "macOS app that monitors Claude Code agent sessions and notifies when they need input"
+channels = ["https://prefix.dev/conda-forge"]
+platforms = ["osx-arm64", "osx-64"]
+preview = ["pixi-build"]
+
+[package]
+name = "agentpulse"
+version = "0.1.0"
+
+[package.build]
+backend = { name = "pixi-build-rattler-build", version = "*", channels = ["https://prefix.dev/conda-forge"] }
+
+[package.build.config]
+extra-input-globs = [
+    "Sources/**/*.swift",
+    "Package.swift",
+    "Info.plist",
+    "icon-source.png",
+    "scripts/*.sh",
+    "build-app.sh",
+]
+
+# Development tasks (not part of the conda build)
+[tasks]
+build = "swift build"
+build-release = "swift build -c release"
+test = "swift run AgentPulse --test"
+run = { cmd = "open build/AgentPulse.app", depends-on = ["bundle"] }
+run-mock = { cmd = "open build/AgentPulse.app --args --mock", depends-on = ["bundle"] }
+bundle = { cmd = "bash build-app.sh debug", depends-on = ["generate-icon"] }
+bundle-release = { cmd = "bash build-app.sh release", depends-on = ["generate-icon"] }
+generate-icon = "bash scripts/generate-icon.sh"
+clean = "rm -rf .build build AppIcon.iconset"

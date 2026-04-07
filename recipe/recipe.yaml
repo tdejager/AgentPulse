@@ -1,0 +1,35 @@
+context:
+  name: agentpulse
+  version: "0.1.0"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  - path: ../
+
+build:
+  number: 0
+  script: bash ${RECIPE_DIR}/build.sh
+
+requirements:
+  build: []
+  run: []
+
+tests:
+  - script:
+      - if: osx
+        then:
+          - test -d "${PREFIX}/lib/agentpulse/AgentPulse.app"
+          - test -f "${PREFIX}/lib/agentpulse/AgentPulse.app/Contents/MacOS/AgentPulse"
+
+about:
+  homepage: https://github.com/tdejager/agent-me
+  summary: macOS app that monitors Claude Code agent sessions and notifies when they need input
+  description: |
+    AgentPulse monitors running Claude Code (and later Codex) CLI sessions,
+    detects when they need user input (permission approvals, questions, turn
+    completion), and sends macOS notifications. Click a session to focus
+    the correct Ghostty tab.
+  license: MIT
