@@ -26,7 +26,7 @@ struct SessionListView: View {
             HStack {
                 Text("Build: \(buildCommit)")
                     .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.quaternary)
+                    .foregroundStyle(.secondary)
                 Spacer()
             }
             .padding(.horizontal, 12)
