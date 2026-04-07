@@ -38,17 +38,27 @@ You're running Claude Code in one terminal tab, working in another. Claude finis
 ### With pixi (recommended)
 
 ```bash
+# From a git clone
+git clone https://github.com/tdejager/AgentPulse.git
+cd AgentPulse
 pixi global install --path .
 ```
 
-This builds the app, creates a macOS shortcut, and makes AgentPulse available in Spotlight and Launchpad.
+This builds the app from source, creates a macOS `.app` bundle with a shortcut, and makes AgentPulse available in Spotlight and Launchpad.
+
+> **Note:** You need the Xcode Command Line Tools installed (`xcode-select --install`) for the Swift compiler.
 
 ### Manual build
 
+If you don't want a global install:
+
 ```bash
+git clone https://github.com/tdejager/AgentPulse.git
 cd AgentPulse
-pixi run bundle        # debug build
+pixi run bundle          # debug build
+# or
 pixi run bundle-release  # release build
+
 open build/AgentPulse.app
 ```
 
