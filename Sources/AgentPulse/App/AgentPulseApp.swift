@@ -4,6 +4,11 @@ import SwiftUI
 struct AgentPulseApp: App {
     @State private var store: SessionStore
     @AppStorage("useMockBackend") private var useMockBackend = false
+    @AppStorage("setupComplete") private var setupComplete = false
+    @State private var showSetup = false
+
+    private let hookServer = HookServer()
+    private let hookBackend: ClaudeCodeHookBackend
 
     init() {
         // Run tests and exit if --test flag
@@ -15,20 +20,34 @@ struct AgentPulseApp: App {
         let useMock = CommandLine.arguments.contains("--mock")
             || UserDefaults.standard.bool(forKey: "useMockBackend")
 
+        let hb = ClaudeCodeHookBackend()
+        self.hookBackend = hb
+
         let backends: [AgentBackend]
         if useMock {
             backends = [MockReplayBackend()]
         } else {
-            backends = [ClaudeCodeBackend()]
+            // Hook backend is primary (instant), JSONL backend is fallback (delayed)
+            backends = [hb, ClaudeCodeBackend()]
         }
 
         _store = State(initialValue: SessionStore(backends: backends))
     }
 
     var body: some Scene {
-        Window("AgentPulse", id: "main") {
+        Window("AgentPulse (\(buildCommit))", id: "main") {
             ContentView(store: store)
                 .onAppear {
+                    // Start hook server
+                    hookServer.onEvent = { [hookBackend] event in
+                        hookBackend.handleEvent(event)
+                        // Trigger a refresh so the UI picks up the new state
+                        Task { @MainActor in
+                            await store.refresh()
+                        }
+                    }
+                    hookServer.start()
+
                     NotificationManager.shared.requestPermission()
                     store.onAttentionNeeded = { session in
                         NotificationManager.shared.notifyIfNeeded(session: session)
@@ -39,9 +58,19 @@ struct AgentPulseApp: App {
                         }
                     }
                     store.startMonitoring()
+
+                    // Show setup on first launch
+                    if !setupComplete {
+                        showSetup = true
+                    }
                 }
                 .onDisappear {
                     store.stopMonitoring()
+                    hookServer.stop()
+                }
+                .sheet(isPresented: $showSetup) {
+                    SetupView(isPresented: $showSetup)
+                        .onDisappear { setupComplete = true }
                 }
         }
         .defaultSize(width: 360, height: 400)
@@ -139,12 +168,55 @@ struct HelpView: View {
 
             Divider()
 
+            hooksSection
+
+            Divider()
+
             Text("Click a session to switch to its terminal tab (Ghostty only).")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding(20)
         .frame(width: 340)
+    }
+
+    @State private var hooksInstalled = HookInstaller.isInstalled()
+
+    private var hooksSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Hooks")
+                .font(.subheadline.bold())
+
+            HStack {
+                if hooksInstalled {
+                    Label("Installed", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                } else {
+                    Label("Not installed", systemImage: "xmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if hooksInstalled {
+                    Button("Uninstall") {
+                        HookInstaller.uninstall()
+                        hooksInstalled = false
+                    }
+                    .font(.caption)
+                } else {
+                    Button("Install") {
+                        try? HookInstaller.install()
+                        hooksInstalled = HookInstaller.isInstalled()
+                    }
+                    .font(.caption)
+                }
+            }
+
+            Text("Hooks provide instant state detection via Claude Code events. Without hooks, state is detected by watching log files (slightly delayed).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func stateRow(color: Color, label: String, description: String) -> some View {

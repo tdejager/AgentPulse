@@ -3,9 +3,13 @@ import SwiftUI
 struct SessionListView: View {
     let store: SessionStore
     @State private var notificationStatus: NotificationStatus = .unknown
+    @State private var hooksInstalled = false
 
     var body: some View {
         VStack(spacing: 0) {
+            if !hooksInstalled {
+                hooksBanner
+            }
             if notificationStatus == .denied {
                 notificationBanner
             }
@@ -20,6 +24,7 @@ struct SessionListView: View {
         }
         .frame(minWidth: 320, minHeight: 200)
         .onAppear {
+            refreshStatus()
             NotificationManager.shared.onStatusChange = { status in
                 DispatchQueue.main.async {
                     self.notificationStatus = status
@@ -28,8 +33,36 @@ struct SessionListView: View {
             NotificationManager.shared.refreshStatus()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            NotificationManager.shared.refreshStatus()
+            refreshStatus()
         }
+    }
+
+    private func refreshStatus() {
+        hooksInstalled = HookInstaller.isInstalled()
+        NotificationManager.shared.refreshStatus()
+    }
+
+    private var hooksBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bolt.circle")
+                .foregroundStyle(.white)
+                .font(.caption)
+            Text("Install hooks for instant detection")
+                .font(.caption)
+                .foregroundStyle(.white)
+            Spacer()
+            Button("Install") {
+                try? HookInstaller.install()
+                hooksInstalled = HookInstaller.isInstalled()
+            }
+            .font(.caption)
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.9))
+            .underline()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.blue)
     }
 
     private var notificationBanner: some View {
