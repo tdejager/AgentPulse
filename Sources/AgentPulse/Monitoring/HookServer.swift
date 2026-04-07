@@ -15,6 +15,13 @@ final class HookServer: @unchecked Sendable {
         set { stateQueue.sync { _onEvent = newValue } }
     }
 
+    /// Callback that returns JSON state for GET /state requests.
+    private var _onStateRequest: (() -> [String: Any])?
+    var onStateRequest: (() -> [String: Any])? {
+        get { stateQueue.sync { _onStateRequest } }
+        set { stateQueue.sync { _onStateRequest = newValue } }
+    }
+
     private let portFilePath: String = {
         let dir = NSHomeDirectory() + "/.agentpulse"
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
@@ -78,17 +85,32 @@ final class HookServer: @unchecked Sendable {
                 return
             }
 
-            // Simple HTTP parsing — extract body after \r\n\r\n
-            if let bodyRange = request.range(of: "\r\n\r\n") {
-                let body = String(request[bodyRange.upperBound...])
-                self?.parseAndDispatch(body)
-            }
+            // Route based on HTTP method and path
+            let isGet = request.hasPrefix("GET ")
+            let isStateRequest = isGet && request.contains("/state")
 
-            // Send 200 OK response, then close
-            let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
-            connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
-                connection.cancel()
-            })
+            if isStateRequest {
+                // GET /state — return app state as JSON
+                let stateJson = self?.onStateRequest?() ?? [:]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: stateJson, options: [.prettyPrinted, .sortedKeys]),
+                   let jsonStr = String(data: jsonData, encoding: .utf8) {
+                    let response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(jsonData.count)\r\n\r\n\(jsonStr)"
+                    connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
+                        connection.cancel()
+                    })
+                }
+            } else {
+                // POST /event — hook event
+                if let bodyRange = request.range(of: "\r\n\r\n") {
+                    let body = String(request[bodyRange.upperBound...])
+                    self?.parseAndDispatch(body)
+                }
+
+                let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
+                connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
+            }
         }
     }
 

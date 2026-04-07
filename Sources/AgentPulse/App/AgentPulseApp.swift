@@ -59,6 +59,38 @@ struct AgentPulseApp: App {
                             await store.refresh()
                         }
                     }
+                    hookServer.onStateRequest = { [store, hookBackend] in
+                        let sessions = store.sessions.map { session -> [String: Any] in
+                            [
+                                "id": session.id,
+                                "projectName": session.projectName,
+                                "state": session.state.label,
+                                "cwd": session.cwd,
+                                "pid": session.pid,
+                                "backendName": session.backendName,
+                            ]
+                        }
+                        let info = hookBackend.diagnosticInfo
+                        let checks = runHealthChecks(hookServer: hookServer, hookBackend: hookBackend)
+                        return [
+                            "buildCommit": buildCommit,
+                            "buildDate": buildDate,
+                            "hookServerPort": hookServer.port,
+                            "hooksInstalled": HookInstaller.isInstalled(),
+                            "notificationStatus": NotificationManager.shared.status == .granted ? "granted" : "not granted",
+                            "sessions": sessions,
+                            "hookBackend": [
+                                "trackedCount": info.trackedCount,
+                                "hookEventCount": info.hookEventCount,
+                                "fileScanCount": info.fileScanCount,
+                            ],
+                            "healthChecks": checks.map { [
+                                "name": $0.name,
+                                "status": $0.status == .pass ? "pass" : $0.status == .warn ? "warn" : "fail",
+                                "detail": $0.detail,
+                            ] },
+                        ]
+                    }
                     hookServer.start()
 
                     NotificationManager.shared.requestPermission()
