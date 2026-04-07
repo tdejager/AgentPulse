@@ -16,9 +16,6 @@ enum TerminalFocuser {
             return
         }
 
-        // Hide AgentPulse so it doesn't steal focus back
-        NSApp.hide(nil)
-
         let ghosttyPid = ghostty.processIdentifier
 
         if let tabIndex = findTabIndex(sessionPid: session.pid, terminalPid: ghosttyPid) {
