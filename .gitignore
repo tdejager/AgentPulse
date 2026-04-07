@@ -6,4 +6,3 @@ pixi.lock
 .swiftpm/
 .DS_Store
 /tmp/
-Sources/AgentPulse/App/BuildInfo.swift

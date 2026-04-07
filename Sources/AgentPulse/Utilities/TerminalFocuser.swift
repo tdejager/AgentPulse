@@ -19,10 +19,13 @@ enum TerminalFocuser {
         // Use AppleScript to find the tab whose terminal working directory matches
         // the session's cwd, then select it. This is more reliable than TTY mapping
         // because tab order can differ from TTY creation order.
+        let escapedCwd = session.cwd
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
         let script = """
         tell application "Ghostty"
             activate
-            set targetCwd to "\(session.cwd)"
+            set targetCwd to "\(escapedCwd)"
             set tabList to every tab of window 1
             repeat with t in tabList
                 set termList to every terminal of t

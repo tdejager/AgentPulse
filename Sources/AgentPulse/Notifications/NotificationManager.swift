@@ -77,6 +77,12 @@ final class NotificationManager: NSObject, @unchecked Sendable {
 
     func notifyIfNeeded(session: AgentSession) {
         logDebug("notifyIfNeeded: \(session.projectName), state: \(session.state.label)")
+
+        // Check user preference
+        guard UserDefaults.standard.bool(forKey: "notificationsEnabled") != false else {
+            return
+        }
+
         guard let center else {
             logDebug("No notification center!")
             return

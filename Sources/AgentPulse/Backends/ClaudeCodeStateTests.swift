@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 /// Self-contained test harness for ClaudeCodeBackend state analysis.
@@ -288,3 +289,5 @@ enum ClaudeCodeStateTests {
         }
     }
 }
+
+#endif

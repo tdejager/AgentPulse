@@ -10,10 +10,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AgentPulse",
-            path: "Sources/AgentPulse",
-            resources: [
-                .copy("TestData")
-            ]
+            path: "Sources/AgentPulse"
         )
     ]
 )

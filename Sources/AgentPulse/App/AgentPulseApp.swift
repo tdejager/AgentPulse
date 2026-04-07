@@ -12,10 +12,12 @@ struct AgentPulseApp: App {
 
     init() {
         // Run tests and exit if --test flag
+        #if DEBUG
         if CommandLine.arguments.contains("--test") {
             ClaudeCodeStateTests.runAll()
             exit(0)
         }
+        #endif
 
         let useMock = CommandLine.arguments.contains("--mock")
             || UserDefaults.standard.bool(forKey: "useMockBackend")
@@ -118,66 +120,68 @@ struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Help")
-                    .font(.headline)
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Help")
+                        .font(.headline)
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
 
-            Divider()
+                Divider()
 
-            Text("Session States")
-                .font(.subheadline.bold())
+                Text("Session States")
+                    .font(.subheadline.bold())
 
-            VStack(alignment: .leading, spacing: 8) {
-                stateRow(color: Color.green, label: "Active", description: "Agent is working — running tools, generating text")
-                stateRow(color: Color.orange, label: "Waiting for input", description: "Turn complete or the agent asked you a question")
-                stateRow(color: Color.red, label: "Needs approval", description: "Agent wants to run a tool and needs your permission")
-                stateRow(color: Color.gray, label: "Idle", description: "No recent activity")
-            }
+                VStack(alignment: .leading, spacing: 8) {
+                    stateRow(color: Color.green, label: "Active", description: "Agent is working — running tools, generating text")
+                    stateRow(color: Color.orange, label: "Waiting for input", description: "Turn complete or the agent asked you a question")
+                    stateRow(color: Color.red, label: "Needs approval", description: "Agent wants to run a tool and needs your permission")
+                    stateRow(color: Color.gray, label: "Idle", description: "No recent activity")
+                }
 
-            Divider()
+                Divider()
 
-            Text("Notifications")
-                .font(.subheadline.bold())
+                Text("Notifications")
+                    .font(.subheadline.bold())
 
-            Text("AgentPulse sends a notification when a session switches to **Waiting for input** or **Needs approval**.")
+                Text("AgentPulse sends a notification when a session switches to **Waiting for input** or **Needs approval**.")
+                    .font(.caption)
+
+                Text("If notifications aren't appearing:")
+                    .font(.caption.bold())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    bulletPoint("Open **System Settings > Notifications > AgentPulse** and enable alerts")
+                    bulletPoint("If using a **Focus mode**, add AgentPulse to the allowed apps")
+                    bulletPoint("Enable **Time Sensitive** notifications for AgentPulse to break through Focus")
+                }
+
+                Button("Open Notification Settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
                 .font(.caption)
 
-            Text("If notifications aren't appearing:")
-                .font(.caption.bold())
+                Divider()
 
-            VStack(alignment: .leading, spacing: 4) {
-                bulletPoint("Open **System Settings > Notifications > AgentPulse** and enable alerts")
-                bulletPoint("If using a **Focus mode**, add AgentPulse to the allowed apps")
-                bulletPoint("Enable **Time Sensitive** notifications for AgentPulse to break through Focus")
+                hooksSection
+
+                Divider()
+
+                Text("Click a session to switch to its terminal tab (Ghostty only).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-
-            Button("Open Notification Settings") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-            .font(.caption)
-
-            Divider()
-
-            hooksSection
-
-            Divider()
-
-            Text("Click a session to switch to its terminal tab (Ghostty only).")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding(20)
         }
-        .padding(20)
-        .frame(width: 340)
+        .frame(minWidth: 380, maxWidth: 380, minHeight: 300, maxHeight: 500)
     }
 
     @State private var hooksInstalled = HookInstaller.isInstalled()

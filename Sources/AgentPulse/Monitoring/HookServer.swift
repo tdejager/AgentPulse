@@ -62,10 +62,14 @@ final class HookServer: @unchecked Sendable {
 
         // Read the full HTTP request
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            defer { connection.cancel() }
-
-            guard let data, error == nil else { return }
-            guard let request = String(data: data, encoding: .utf8) else { return }
+            guard let data, error == nil else {
+                connection.cancel()
+                return
+            }
+            guard let request = String(data: data, encoding: .utf8) else {
+                connection.cancel()
+                return
+            }
 
             // Simple HTTP parsing — extract body after \r\n\r\n
             if let bodyRange = request.range(of: "\r\n\r\n") {
@@ -73,9 +77,11 @@ final class HookServer: @unchecked Sendable {
                 self?.parseAndDispatch(body)
             }
 
-            // Send 200 OK response
+            // Send 200 OK response, then close
             let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
-            connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in })
+            connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
+                connection.cancel()
+            })
         }
     }
 
