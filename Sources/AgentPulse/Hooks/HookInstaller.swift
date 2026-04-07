@@ -23,7 +23,7 @@ enum HookInstaller {
         return true
     }
 
-    /// Install the hook script and register it in settings.local.json.
+    /// Install the hook script and register it in settings.json.
     static func install() throws {
         // 1. Create hook script
         let hooksDir = NSHomeDirectory() + "/.claude/hooks"
@@ -45,7 +45,7 @@ enum HookInstaller {
         let attrs: [FileAttributeKey: Any] = [.posixPermissions: 0o755]
         try FileManager.default.setAttributes(attrs, ofItemAtPath: hookScriptPath)
 
-        // 2. Register hooks in settings.local.json
+        // 2. Register hooks in settings.json
         var settings = readSettings() ?? [:]
         var hooks = settings["hooks"] as? [String: Any] ?? [:]
 
@@ -80,7 +80,7 @@ enum HookInstaller {
         logDebug("HookInstaller: installed hooks", category: .hook)
     }
 
-    /// Uninstall the hook script and remove entries from settings.local.json.
+    /// Uninstall the hook script and remove entries from settings.json.
     static func uninstall() {
         // Remove hook script
         try? FileManager.default.removeItem(atPath: hookScriptPath)

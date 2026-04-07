@@ -102,7 +102,7 @@ fi
 
 if python3 -c "
 import json, os, sys
-path = os.path.expanduser('~/.claude/settings.local.json')
+path = os.path.expanduser('~/.claude/settings.json')
 if not os.path.exists(path): sys.exit(1)
 with open(path) as f: d = json.load(f)
 hooks = d.get('hooks', {})
@@ -110,7 +110,7 @@ needed = ['Stop', 'PermissionRequest', 'SessionStart']
 found = [e for e in needed if any('agentpulse' in h.get('command','') for entry in hooks.get(e,[]) for h in entry.get('hooks',[]))]
 sys.exit(0 if len(found) == len(needed) else 1)
 " 2>/dev/null; then
-    pass "Hooks registered in settings.local.json"
+    pass "Hooks registered in settings.json"
 else
     warn "Hooks not registered (install from app)"
 fi

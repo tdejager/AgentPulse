@@ -111,7 +111,7 @@ for s in state['sessions']:
 cat ~/.claude/hooks/agentpulse-hook.sh 2>/dev/null && echo "Hook script: EXISTS" || echo "Hook script: MISSING"
 python3 -c "
 import json
-with open('$HOME/.claude/settings.local.json') as f:
+with open('$HOME/.claude/settings.json') as f:
     d = json.load(f)
 hooks = d.get('hooks', {})
 events = [e for e in hooks if any('agentpulse' in h.get('command','') for entry in hooks[e] for h in entry.get('hooks',[]))]
@@ -130,12 +130,12 @@ This test requires a **new** Claude Code session (started AFTER hooks were insta
 # 2. Open a new terminal tab
 # 3. Run: claude
 # 4. Type a prompt and wait for Claude to finish
-# 5. Check the raw hook log:
-cat /tmp/hook-raw.log | tail -5
-# Should show JSON with hook_event_name, session_id, cwd
+# 5. Check for hook events in the app log:
+grep '\[hook\].*received' /tmp/agentpulse.log | tail -5
+# Should show lines like: [hook] HookServer: received Stop sessionId=...
 ```
 
-If `/tmp/hook-raw.log` is empty or doesn't exist, the hooks aren't being triggered. Common causes:
+If no `[hook]` entries appear in the log, the hooks aren't being triggered. Common causes:
 - The Claude Code session was started BEFORE hooks were installed (restart it)
 - The hook script isn't executable (`chmod +x ~/.claude/hooks/agentpulse-hook.sh`)
 - The port file is stale (restart AgentPulse)
@@ -171,7 +171,7 @@ The state endpoint includes health checks. All should be `pass`:
 | Check | What it verifies |
 |-------|-----------------|
 | Hook script | `~/.claude/hooks/agentpulse-hook.sh` exists |
-| Hooks in settings | Entries exist in `~/.claude/settings.local.json` |
+| Hooks in settings | Entries exist in `~/.claude/settings.json` |
 | Hook server | Listening on a port |
 | Port file | `~/.agentpulse/port` matches actual server port |
 | Notification permission | macOS permission granted |
