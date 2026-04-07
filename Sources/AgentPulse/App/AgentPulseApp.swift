@@ -28,9 +28,10 @@ struct AgentPulseApp: App {
         let backends: [AgentBackend]
         if useMock {
             backends = [MockReplayBackend()]
+        } else if HookInstaller.isInstalled() {
+            backends = [hb]
         } else {
-            // Hook backend is primary (instant), JSONL backend is fallback (delayed)
-            backends = [hb, ClaudeCodeBackend()]
+            backends = [ClaudeCodeBackend()]
         }
 
         _store = State(initialValue: SessionStore(backends: backends))
