@@ -64,7 +64,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         case "PermissionRequest":
             return .permissionRequest(event.toolName ?? "tool")
         case "Notification":
-            if event.notificationType == "elicitation_dialog" {
+            if event.notificationType == "elicitation_dialog" || event.notificationType == "idle_prompt" {
                 return .waitingForInput
             }
             return .active

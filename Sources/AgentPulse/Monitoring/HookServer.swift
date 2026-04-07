@@ -5,8 +5,15 @@ import Network
 /// The hook script POSTs JSON to http://localhost:<port>/event
 final class HookServer: @unchecked Sendable {
     private var listener: NWListener?
-    private(set) var port: UInt16 = 0
-    var onEvent: ((HookEvent) -> Void)?
+    private let stateQueue = DispatchQueue(label: "hook-server-state")
+    private var _port: UInt16 = 0
+    private var _onEvent: ((HookEvent) -> Void)?
+
+    var port: UInt16 { stateQueue.sync { _port } }
+    var onEvent: ((HookEvent) -> Void)? {
+        get { stateQueue.sync { _onEvent } }
+        set { stateQueue.sync { _onEvent = newValue } }
+    }
 
     private let portFilePath: String = {
         let dir = NSHomeDirectory() + "/.agentpulse"
@@ -29,7 +36,7 @@ final class HookServer: @unchecked Sendable {
             switch state {
             case .ready:
                 if let port = self?.listener?.port?.rawValue {
-                    self?.port = port
+                    self?.stateQueue.sync { self?._port = port }
                     self?.writePortFile(port)
                     logDebug("HookServer: listening on port \(port)", category: .hook)
                 }

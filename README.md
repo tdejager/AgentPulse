@@ -42,15 +42,29 @@ Launch AgentPulse and start Claude Code sessions in your terminal. Sessions appe
 
 Notifications fire when a session needs attention. Clicking a session row switches to the correct terminal tab (Ghostty only for now, other terminals welcome as PRs).
 
+### Hooks (recommended)
+
+On first launch, AgentPulse offers to install Claude Code hooks for instant state detection. Hooks fire events directly from Claude Code (Stop, PermissionRequest, etc.) with zero delay and no false positives. Without hooks, state is detected by watching log files (slightly delayed).
+
+You can manage hooks from Settings or the Help sheet. Existing Claude Code sessions need to be restarted after installing hooks.
+
+### Diagnostics
+
+Click the ladybug icon in the toolbar to open the diagnostics window:
+- **Log** — live structured event log with category filtering
+- **State** — health checklist and session inspector
+- **Simulator** — inject test events to exercise the full pipeline
+
 ## Development
 
 ```bash
-pixi run build       # swift debug build
-pixi run test        # run state analysis tests
-pixi run bundle      # build .app bundle
-pixi run run         # bundle + launch
-pixi run run-mock    # bundle + launch with fake sessions
-pixi run clean       # remove build artifacts
+pixi run build            # swift debug build
+pixi run test             # run 28 state analysis tests
+pixi run integration-test # run 12 integration tests (hook server, state, notifications)
+pixi run bundle           # build .app bundle
+pixi run run              # bundle + launch
+pixi run run-mock         # bundle + launch with fake sessions
+pixi run clean            # remove build artifacts
 ```
 
 Adding support for a new agent (e.g. Codex) is a single file implementing the `AgentBackend` protocol.

@@ -30,7 +30,5 @@
     <string>AgentPulse needs Automation access to switch to the correct terminal tab when you click a session.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
-    <key>NSUserNotificationAlertStyle</key>
-    <string>banner</string>
 </dict>
 </plist>

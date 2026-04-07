@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -o xtrace -o nounset -o pipefail -o errexit
 
+# Generate icon first (needed by build-app.sh)
+bash scripts/generate-icon.sh
+
 # Build the app bundle using the same script as local dev
 bash build-app.sh release
 
