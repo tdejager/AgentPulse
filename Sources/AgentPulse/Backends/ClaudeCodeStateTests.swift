@@ -240,11 +240,11 @@ enum ClaudeCodeStateTests {
 
         // === EDGE CASES ===
 
-        check("ExitPlanMode tool → permissionRequest after 5s (not user-facing)",
+        check("ExitPlanMode tool → waitingForInput (user-facing)",
             entries: [
                 entry("assistant", stop: "tool_use", ctypes: ["tool_use"], tool: "ExitPlanMode"),
             ],
-            expected: .permissionRequest("ExitPlanMode"),
+            expected: .waitingForInput,
             timePassed: 10
         )
 
@@ -254,6 +254,22 @@ enum ClaudeCodeStateTests {
             ],
             expected: .active,
             timePassed: 0.5
+        )
+
+        check("Agent tool running for 60s → still active (long-running)",
+            entries: [
+                entry("assistant", stop: "tool_use", ctypes: ["tool_use"], tool: "Agent"),
+            ],
+            expected: .active,
+            timePassed: 60
+        )
+
+        check("Skill tool running for 30s → still active (long-running)",
+            entries: [
+                entry("assistant", stop: "tool_use", ctypes: ["tool_use"], tool: "Skill"),
+            ],
+            expected: .active,
+            timePassed: 30
         )
 
         check("stop_sequence → waitingForInput (refusal/limit)",

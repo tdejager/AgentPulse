@@ -11,8 +11,11 @@ final class ClaudeCodeBackend: AgentBackend, @unchecked Sendable {
     /// Set low (1s) because the file write + kqueue notification already adds ~1s latency.
     var attentionThresholdSeconds: TimeInterval = 1.0
 
-    /// Tools that represent the agent asking the user something (not a real tool execution).
-    private let userFacingTools: Set<String> = ["AskUserQuestion"]
+    /// Tools that represent the agent asking the user something.
+    private let userFacingTools: Set<String> = ["AskUserQuestion", "ExitPlanMode"]
+
+    /// Tools that are inherently long-running and should not trigger "needs approval".
+    private let longRunningTools: Set<String> = ["Agent", "Skill"]
 
     init(
         sessionsDirectory: String = NSHomeDirectory() + "/.claude/sessions",
@@ -211,15 +214,19 @@ final class ClaudeCodeBackend: AgentBackend, @unchecked Sendable {
 
         // 6. assistant with tool_use as LAST entry → either:
         //    a) Tool is running and result hasn't been written yet (active)
-        //    b) Waiting for user (AskUserQuestion, permission prompt)
-        //    Distinguish by checking elapsed time.
+        //    b) Waiting for user (AskUserQuestion, ExitPlanMode)
+        //    c) Long-running tool (Agent, Skill) — stays active
+        //    d) Permission prompt — needs approval
+        //    Distinguish by tool name and elapsed time.
         if last.type == "assistant" && (last.stopReason == "tool_use" || last.contentTypes.contains("tool_use")) {
             if let ts = last.timestamp {
                 let elapsed = Date().timeIntervalSince(ts)
                 if elapsed > attentionThresholdSeconds {
-                    // Waiting too long — needs user attention
                     if let tool = last.toolName, userFacingTools.contains(tool) {
                         return .waitingForInput
+                    }
+                    if let tool = last.toolName, longRunningTools.contains(tool) {
+                        return .active
                     }
                     return .permissionRequest(last.toolName ?? "tool")
                 }
