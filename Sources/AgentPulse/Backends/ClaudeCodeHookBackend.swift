@@ -98,10 +98,13 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         // Also scan session files for sessions that started before the app launched
         scanExistingSessions()
 
+        // Prune sessions that have no live process and no session file on disk
+        pruneOrphanedSessions()
+
         let sessions = syncQueue.sync { Array(trackedSessions.values) }
 
         return sessions.compactMap { tracked in
-            guard ProcessProbe.isAlive(pid: tracked.pid) || tracked.pid == 0 else {
+            guard ProcessProbe.isAlive(pid: tracked.pid) || (tracked.pid == 0 && hasSessionFile(tracked.id)) else {
                 return nil
             }
             // Include JSONL path in metadata for fallback state analysis
@@ -194,11 +197,38 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         }
     }
 
+    /// Check if a session has a real file in ~/.claude/sessions/
+    private func hasSessionFile(_ sessionId: String) -> Bool {
+        let sessionsDir = NSHomeDirectory() + "/.claude/sessions"
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: sessionsDir) else { return false }
+        for file in files where file.hasSuffix(".json") {
+            let path = (sessionsDir as NSString).appendingPathComponent(file)
+            guard let data = FileManager.default.contents(atPath: path),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let sid = json["sessionId"] as? String,
+                  sid == sessionId
+            else { continue }
+            return true
+        }
+        return false
+    }
+
+    /// Remove sessions that have no live process and no session file on disk.
+    private func pruneOrphanedSessions() {
+        syncQueue.sync {
+            trackedSessions = trackedSessions.filter { _, session in
+                if ProcessProbe.isAlive(pid: session.pid) { return true }
+                if session.pid == 0 { return false } // No PID = injected via hook, not a real session
+                return true // Has a PID but process died — will be filtered in discoverSessions
+            }
+        }
+    }
+
     /// Remove dead sessions.
     func pruneDeadSessions() {
         syncQueue.sync {
             trackedSessions = trackedSessions.filter { _, session in
-                session.pid == 0 || ProcessProbe.isAlive(pid: session.pid)
+                ProcessProbe.isAlive(pid: session.pid) || hasSessionFile(session.id)
             }
         }
     }
