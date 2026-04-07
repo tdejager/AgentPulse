@@ -29,7 +29,6 @@ struct SettingsView: View {
                         hooksInstalled = HookInstaller.isInstalled()
                     }
                     Text("Hooks provide instant state detection. Requires app restart after installing.")
-                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if hooksInstalled && !useMockBackend {
                     Button("Uninstall Hooks") {
@@ -48,7 +47,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 400)
+        .frame(width: 450)
         .padding()
         .onAppear {
             hooksInstalled = HookInstaller.isInstalled()

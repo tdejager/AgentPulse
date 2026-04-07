@@ -5,21 +5,30 @@ struct SessionRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // State indicator dot
             Circle()
                 .fill(stateColor)
                 .frame(width: 10, height: 10)
 
-            // Agent icon
             Image(systemName: session.iconName)
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
 
-            // Session info
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.projectName)
-                    .font(.system(.body, weight: .medium))
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(session.projectName)
+                        .font(.system(.body, weight: .medium))
+                        .lineLimit(1)
+
+                    // Source indicator
+                    Text(session.source == "hooks" ? "hooks" : "log")
+                        .font(.system(.caption2, weight: .medium))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule().fill(session.source == "hooks" ? Color.purple.opacity(0.15) : Color.gray.opacity(0.15))
+                        )
+                        .foregroundStyle(session.source == "hooks" ? .purple : .secondary)
+                }
 
                 HStack(spacing: 4) {
                     Text(session.state.label)
@@ -36,7 +45,6 @@ struct SessionRow: View {
 
             Spacer()
 
-            // Time since last activity
             Text(timeAgo(session.lastActivity))
                 .font(.caption)
                 .foregroundStyle(.tertiary)

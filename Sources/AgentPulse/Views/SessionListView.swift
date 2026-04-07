@@ -22,7 +22,7 @@ struct SessionListView: View {
                 }
             }
         }
-        .frame(minWidth: 320, minHeight: 200)
+        .frame(minWidth: 380, minHeight: 250)
         .onAppear {
             refreshStatus()
             NotificationManager.shared.onStatusChange = { status in

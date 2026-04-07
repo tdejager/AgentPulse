@@ -35,6 +35,7 @@ struct AgentSession: Identifiable, Sendable {
     var lastActivity: Date
     var projectName: String
     var lastMessage: String?
+    var source: String  // "hooks" or "file-scan"
 
     init(from discovered: DiscoveredSession, state: SessionState = .active) {
         self.id = discovered.id
@@ -46,5 +47,6 @@ struct AgentSession: Identifiable, Sendable {
         self.lastActivity = Date()
         self.projectName = (discovered.cwd as NSString).lastPathComponent
         self.lastMessage = nil
+        self.source = discovered.metadata["source"] ?? "unknown"
     }
 }
