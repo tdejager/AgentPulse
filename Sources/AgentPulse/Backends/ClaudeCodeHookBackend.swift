@@ -218,8 +218,8 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         syncQueue.sync {
             trackedSessions = trackedSessions.filter { _, session in
                 if ProcessProbe.isAlive(pid: session.pid) { return true }
-                if session.pid == 0 { return false } // No PID = injected via hook, not a real session
-                return true // Has a PID but process died — will be filtered in discoverSessions
+                // No live process — only keep if there's a real session file
+                return hasSessionFile(session.id)
             }
         }
     }
