@@ -89,6 +89,9 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     // MARK: - AgentBackend
 
     func discoverSessions() async throws -> [DiscoveredSession] {
+        // Also scan session files for sessions that started before the app launched
+        scanExistingSessions()
+
         let sessions = syncQueue.sync { Array(trackedSessions.values) }
 
         return sessions.compactMap { tracked in
@@ -118,6 +121,38 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
 
     func isAlive(session: DiscoveredSession) -> Bool {
         session.pid == 0 || ProcessProbe.isAlive(pid: session.pid)
+    }
+
+    /// Scan ~/.claude/sessions/ for sessions not yet tracked (started before app launch).
+    private func scanExistingSessions() {
+        let sessionsDir = NSHomeDirectory() + "/.claude/sessions"
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: sessionsDir) else { return }
+
+        syncQueue.sync {
+            for file in files where file.hasSuffix(".json") {
+                let path = (sessionsDir as NSString).appendingPathComponent(file)
+                guard let data = FileManager.default.contents(atPath: path),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let pid = json["pid"] as? Int,
+                      let sessionId = json["sessionId"] as? String,
+                      let cwd = json["cwd"] as? String,
+                      let startedAtMs = json["startedAt"] as? Double
+                else { continue }
+
+                let pid32 = Int32(pid)
+                guard ProcessProbe.isAlive(pid: pid32) else { continue }
+                guard trackedSessions[sessionId] == nil else { continue }
+
+                trackedSessions[sessionId] = TrackedSession(
+                    id: sessionId,
+                    pid: pid32,
+                    cwd: cwd,
+                    startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
+                    state: .active,
+                    lastActivity: Date()
+                )
+            }
+        }
     }
 
     /// Remove dead sessions.
