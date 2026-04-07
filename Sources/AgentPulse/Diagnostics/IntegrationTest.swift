@@ -36,6 +36,15 @@ enum IntegrationTests {
             logDebug("Integration test: attention needed for \(session.projectName)", category: .notification)
         }
 
+        // Create a fake session file so the test session survives pruning
+        let myPid = ProcessInfo.processInfo.processIdentifier
+        let sessionsDir = NSHomeDirectory() + "/.claude/sessions"
+        let fakeSessionFile = "\(sessionsDir)/\(myPid).json"
+        let fakeSessionJson = """
+        {"pid":\(myPid),"sessionId":"inttest-1","cwd":"/tmp/integration-test","startedAt":\(Int(Date().timeIntervalSince1970 * 1000)),"kind":"interactive","entrypoint":"cli"}
+        """
+        try? fakeSessionJson.write(toFile: fakeSessionFile, atomically: true, encoding: .utf8)
+
         // Wait for server to start
         try? await Task.sleep(for: .seconds(1))
 
@@ -120,6 +129,7 @@ enum IntegrationTests {
         // Clean up
         hookServer.stop()
         store.stopMonitoring()
+        try? FileManager.default.removeItem(atPath: fakeSessionFile)
 
         // Results
         print("\n\(passed + failed) tests: \(passed) passed, \(failed) failed")
