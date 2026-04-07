@@ -1,6 +1,13 @@
 import Foundation
 import UserNotifications
 
+enum NotificationStatus: Equatable, Sendable {
+    case unknown
+    case granted
+    case denied
+    case noBundleId
+}
+
 final class NotificationManager: NSObject, @unchecked Sendable {
     static let shared = NotificationManager()
 
@@ -10,6 +17,10 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     /// Track last notification per session to debounce.
     private var lastNotified: [String: (state: SessionState, time: Date)] = [:]
     private let debounceInterval: TimeInterval = 10.0
+
+    /// Observable status for the UI to display warnings.
+    private(set) var status: NotificationStatus = .unknown
+    var onStatusChange: ((NotificationStatus) -> Void)?
 
     var onNotificationClicked: ((String) -> Void)?
 
@@ -21,6 +32,7 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         logDebug("Bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
         guard Bundle.main.bundleIdentifier != nil else {
             logDebug("NotificationManager: no bundle identifier, notifications disabled")
+            updateStatus(.noBundleId)
             return
         }
 
@@ -34,10 +46,33 @@ final class NotificationManager: NSObject, @unchecked Sendable {
             if let error {
                 logDebug("Notification permission error: \(error)")
             }
-            nc.getNotificationSettings { settings in
-                logDebug("Notification settings: authorizationStatus=\(settings.authorizationStatus.rawValue) alertSetting=\(settings.alertSetting.rawValue) alertStyle=\(settings.alertStyle.rawValue)")
+            self.updateStatus(granted ? .granted : .denied)
+        }
+    }
+
+    /// Re-check notification settings (call when app becomes active).
+    func refreshStatus() {
+        guard let center else {
+            updateStatus(.noBundleId)
+            return
+        }
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                self.updateStatus(.granted)
+            case .denied:
+                self.updateStatus(.denied)
+            case .notDetermined:
+                self.updateStatus(.unknown)
+            @unknown default:
+                self.updateStatus(.unknown)
             }
         }
+    }
+
+    private func updateStatus(_ newStatus: NotificationStatus) {
+        status = newStatus
+        onStatusChange?(newStatus)
     }
 
     func notifyIfNeeded(session: AgentSession) {
