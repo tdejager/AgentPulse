@@ -40,7 +40,7 @@ Launch AgentPulse and start Claude Code sessions in your terminal. Sessions appe
 | **Needs approval** (red) | Agent needs permission to run a tool |
 | **Idle** (gray) | No recent activity |
 
-Click a session row to switch to its Ghostty tab. Notifications fire when a session needs attention.
+Notifications fire when a session needs attention. Clicking a session row switches to the correct terminal tab (Ghostty only for now, other terminals welcome as PRs).
 
 ## Development
 
