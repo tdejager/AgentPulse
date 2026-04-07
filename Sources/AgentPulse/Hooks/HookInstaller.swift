@@ -77,7 +77,7 @@ enum HookInstaller {
         let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: URL(fileURLWithPath: settingsPath), options: .atomic)
 
-        logDebug("HookInstaller: installed hooks")
+        logDebug("HookInstaller: installed hooks", category: .hook)
     }
 
     /// Uninstall the hook script and remove entries from settings.local.json.
@@ -110,7 +110,7 @@ enum HookInstaller {
             try? data.write(to: URL(fileURLWithPath: settingsPath), options: .atomic)
         }
 
-        logDebug("HookInstaller: uninstalled hooks")
+        logDebug("HookInstaller: uninstalled hooks", category: .hook)
     }
 
     private static func readSettings() -> [String: Any]? {

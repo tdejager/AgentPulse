@@ -185,7 +185,7 @@ final class ClaudeCodeBackend: AgentBackend, @unchecked Sendable {
 
         // Debug: log what we're analyzing
         let elapsed = last.timestamp.map { String(format: "%.1fs ago", Date().timeIntervalSince($0)) } ?? "no-ts"
-        logDebug("analyzeEntries: last=\(last.type) stop=\(last.stopReason ?? "nil") tool=\(last.toolName ?? "nil") ctypes=\(last.contentTypes) \(elapsed) (\(meaningful.count) meaningful of \(entries.count))")
+        logDebug("analyzeEntries: last=\(last.type) stop=\(last.stopReason ?? "nil") tool=\(last.toolName ?? "nil") \(elapsed)", category: .state)
 
         // 1. turn_duration → turn ended, waiting for next user message
         if last.type == "system" && last.subtype == "turn_duration" {

@@ -131,6 +131,23 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         return tracked?.state ?? .idle
     }
 
+    struct DiagnosticInfo {
+        let trackedCount: Int
+        let hookEventCount: Int
+        let fileScanCount: Int
+    }
+
+    var diagnosticInfo: DiagnosticInfo {
+        syncQueue.sync {
+            let hookCount = trackedSessions.values.filter(\.hasReceivedHookEvent).count
+            return DiagnosticInfo(
+                trackedCount: trackedSessions.count,
+                hookEventCount: hookCount,
+                fileScanCount: trackedSessions.count - hookCount
+            )
+        }
+    }
+
     func watchPath(for session: DiscoveredSession) -> String? {
         // For sessions without hook events, watch the JSONL file
         let hasHookEvents = syncQueue.sync { trackedSessions[session.id]?.hasReceivedHookEvent ?? false }

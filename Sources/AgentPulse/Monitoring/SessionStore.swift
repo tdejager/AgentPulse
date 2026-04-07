@@ -1,18 +1,6 @@
 import Foundation
 import SwiftUI
 
-/// Simple file logger for debugging — writes to /tmp/agentpulse.log
-func logDebug(_ message: String) {
-    let line = "[\(ISO8601DateFormatter().string(from: Date()))] \(message)\n"
-    let path = "/tmp/agentpulse.log"
-    if let handle = FileHandle(forWritingAtPath: path) {
-        handle.seekToEndOfFile()
-        handle.write(line.data(using: .utf8)!)
-        try? handle.close()
-    } else {
-        FileManager.default.createFile(atPath: path, contents: line.data(using: .utf8))
-    }
-}
 
 /// Central store that discovers and monitors agent sessions across all backends.
 @Observable
@@ -61,7 +49,7 @@ final class SessionStore {
 
         for backend in backends {
             if let discovered = try? await backend.discoverSessions() {
-                logDebug("Discovered \(discovered.count) sessions from \(backend.name)")
+                logDebug("Discovered \(discovered.count) sessions from \(backend.name)", category: .discovery)
                 for session in discovered {
                     allDiscovered.append((session, backend))
                 }
@@ -78,9 +66,12 @@ final class SessionStore {
         }
         sessions.removeAll { removedIds.contains($0.id) }
 
-        // Add new sessions and start monitors
+        // Update state for existing sessions
         for (discovered, backend) in allDiscovered {
             if sessions.contains(where: { $0.id == discovered.id }) {
+                if let newState = try? await backend.analyzeState(for: discovered) {
+                    updateState(sessionId: discovered.id, state: newState)
+                }
                 continue
             }
 
@@ -107,11 +98,11 @@ final class SessionStore {
         sessions[index].state = state
         sessions[index].lastActivity = Date()
 
-        logDebug("[AgentPulse] Session \(sessions[index].projectName): \(previousState.label) → \(state.label)")
+        logDebug("Session \(sessions[index].projectName): \(previousState.label) → \(state.label)", category: .state, metadata: ["sessionId": sessionId, "from": previousState.label, "to": state.label])
 
         // Notify if attention is newly needed
         if state.isAttentionNeeded && !previousState.isAttentionNeeded {
-            logDebug("[AgentPulse] Firing notification for \(sessions[index].projectName)")
+            logDebug("Firing notification for \(sessions[index].projectName)", category: .notification)
             onAttentionNeeded?(sessions[index])
         }
 

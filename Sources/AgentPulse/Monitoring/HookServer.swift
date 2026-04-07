@@ -21,7 +21,7 @@ final class HookServer: @unchecked Sendable {
             params.allowLocalEndpointReuse = true
             listener = try NWListener(using: params, on: .any)
         } catch {
-            logDebug("HookServer: failed to create listener: \(error)")
+            logDebug("HookServer: failed to create listener: \(error)", category: .hook)
             return
         }
 
@@ -31,10 +31,10 @@ final class HookServer: @unchecked Sendable {
                 if let port = self?.listener?.port?.rawValue {
                     self?.port = port
                     self?.writePortFile(port)
-                    logDebug("HookServer: listening on port \(port)")
+                    logDebug("HookServer: listening on port \(port)", category: .hook)
                 }
             case .failed(let error):
-                logDebug("HookServer: failed: \(error)")
+                logDebug("HookServer: failed: \(error)", category: .hook)
             default:
                 break
             }
@@ -98,7 +98,7 @@ final class HookServer: @unchecked Sendable {
             notificationType: json["notification_type"] as? String
         )
 
-        logDebug("HookServer: received \(event.eventName) session=\(event.sessionId) tool=\(event.toolName ?? "")")
+        logDebug("HookServer: received \(event.eventName)", category: .hook, metadata: ["eventName": event.eventName, "sessionId": event.sessionId, "tool": event.toolName ?? "", "rawBody": body])
         onEvent?(event)
     }
 }

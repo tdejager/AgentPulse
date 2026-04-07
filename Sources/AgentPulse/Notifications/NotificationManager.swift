@@ -29,9 +29,9 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     }
 
     func requestPermission() {
-        logDebug("Bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
+        logDebug("Bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")", category: .notification)
         guard Bundle.main.bundleIdentifier != nil else {
-            logDebug("NotificationManager: no bundle identifier, notifications disabled")
+            logDebug("NotificationManager: no bundle identifier, notifications disabled", category: .notification)
             updateStatus(.noBundleId)
             return
         }
@@ -42,9 +42,9 @@ final class NotificationManager: NSObject, @unchecked Sendable {
 
         setupCategories()
         nc.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            logDebug("Notification permission granted: \(granted)")
+            logDebug("Notification permission granted: \(granted)", category: .notification)
             if let error {
-                logDebug("Notification permission error: \(error)")
+                logDebug("Notification permission error: \(error)", category: .notification)
             }
             self.updateStatus(granted ? .granted : .denied)
         }
@@ -76,7 +76,7 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     }
 
     func notifyIfNeeded(session: AgentSession) {
-        logDebug("notifyIfNeeded: \(session.projectName), state: \(session.state.label)")
+        logDebug("notifyIfNeeded: \(session.projectName), state: \(session.state.label)", category: .notification)
 
         // Check user preference
         guard UserDefaults.standard.bool(forKey: "notificationsEnabled") != false else {
@@ -84,7 +84,7 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         }
 
         guard let center else {
-            logDebug("No notification center!")
+            logDebug("No notification center!", category: .notification)
             return
         }
         // Re-assert delegate in case it was lost
@@ -94,7 +94,7 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         if let last = lastNotified[session.id],
            last.state == session.state,
            Date().timeIntervalSince(last.time) < debounceInterval {
-            logDebug("Debounced notification for \(session.projectName)")
+            logDebug("Debounced notification for \(session.projectName)", category: .notification)
             return
         }
 
@@ -129,12 +129,12 @@ final class NotificationManager: NSObject, @unchecked Sendable {
             trigger: nil
         )
 
-        logDebug("Delivering notification '\(requestId)': \(content.title)")
+        logDebug("Delivering notification '\(requestId)': \(content.title)", category: .notification)
         center.add(request) { error in
             if let error {
-                logDebug("Notification delivery FAILED: \(error)")
+                logDebug("Notification delivery FAILED: \(error)", category: .notification)
             } else {
-                logDebug("Notification delivered OK: \(requestId)")
+                logDebug("Notification delivered OK: \(requestId)", category: .notification)
             }
         }
     }
@@ -178,7 +178,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        logDebug("willPresent notification: \(notification.request.content.title)")
+        logDebug("willPresent notification: \(notification.request.content.title)", category: .notification)
         completionHandler([.banner, .sound, .list])
     }
 }

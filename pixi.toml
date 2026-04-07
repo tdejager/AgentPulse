@@ -28,6 +28,7 @@ extra-input-globs = [
 build = "swift build"
 build-release = "swift build -c release"
 test = "swift run AgentPulse --test"
+integration-test = "swift run AgentPulse --integration-test"
 run = { cmd = "open build/AgentPulse.app", depends-on = ["bundle"] }
 run-mock = { cmd = "open build/AgentPulse.app --args --mock", depends-on = ["bundle"] }
 bundle = { cmd = "bash build-app.sh debug", depends-on = ["generate-icon"] }

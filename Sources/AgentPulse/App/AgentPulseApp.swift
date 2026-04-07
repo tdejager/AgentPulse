@@ -11,11 +11,21 @@ struct AgentPulseApp: App {
     private let hookBackend: ClaudeCodeHookBackend
 
     init() {
-        // Run tests and exit if --test flag
         #if DEBUG
+        // Run unit tests and exit
         if CommandLine.arguments.contains("--test") {
             ClaudeCodeStateTests.runAll()
             exit(0)
+        }
+        // Run integration tests and exit
+        if CommandLine.arguments.contains("--integration-test") {
+            Task { @MainActor in
+                await IntegrationTests.runAll()
+                exit(0)
+            }
+            // Need to start the run loop for async to work
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 30))
+            exit(1) // timeout
         }
         #endif
 
@@ -78,6 +88,11 @@ struct AgentPulseApp: App {
         }
         .defaultSize(width: 360, height: 400)
 
+        Window("Diagnostics", id: "diagnostics") {
+            DiagnosticsWindow(store: store, hookServer: hookServer, hookBackend: hookBackend)
+        }
+        .defaultSize(width: 650, height: 500)
+
         #if os(macOS)
         Settings {
             SettingsView()
@@ -89,10 +104,19 @@ struct AgentPulseApp: App {
 struct ContentView: View {
     let store: SessionStore
     @State private var showHelp = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         SessionListView(store: store)
             .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        openWindow(id: "diagnostics")
+                    } label: {
+                        Image(systemName: "ladybug")
+                    }
+                    .help("Diagnostics")
+                }
                 ToolbarItem(placement: .automatic) {
                     Button {
                         showHelp = true
