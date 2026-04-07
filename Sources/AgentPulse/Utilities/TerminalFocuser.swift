@@ -36,11 +36,11 @@ enum TerminalFocuser {
         let script = """
         tell application "Ghostty"
             activate
-            select tab \(tabNumber) of window 1
+            select tab (tab \(tabNumber) of window 1)
         end tell
         """
 
-        logDebug("Running AppleScript: select tab \(tabNumber) of window 1")
+        logDebug("Running AppleScript: select tab (tab \(tabNumber) of window 1)")
         if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
             appleScript.executeAndReturnError(&error)
