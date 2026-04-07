@@ -38,10 +38,7 @@ You're running Claude Code in one terminal tab, working in another. Claude finis
 ### With pixi (recommended)
 
 ```bash
-# From a git clone
-git clone https://github.com/tdejager/AgentPulse.git
-cd AgentPulse
-pixi global install --path .
+pixi global install --git https://github.com/tdejager/AgentPulse.git
 ```
 
 This builds the app from source, creates a macOS `.app` bundle with a shortcut, and makes AgentPulse available in Spotlight and Launchpad.
