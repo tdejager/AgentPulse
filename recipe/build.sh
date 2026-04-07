@@ -1,31 +1,13 @@
 #!/usr/bin/env bash
 set -o xtrace -o nounset -o pipefail -o errexit
 
-# Build the Swift project
-swift build -c release
+# Build the app bundle using the same script as local dev
+bash build-app.sh release
 
-# Create the .app bundle
-APP_DIR="${PREFIX}/lib/agentpulse/AgentPulse.app"
-CONTENTS_DIR="${APP_DIR}/Contents"
-MACOS_DIR="${CONTENTS_DIR}/MacOS"
-RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-
-mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
-
-# Copy executable
-install -m0755 .build/release/AgentPulse "${MACOS_DIR}/AgentPulse"
-
-# Copy Info.plist
-install -m0644 Info.plist "${CONTENTS_DIR}/Info.plist"
-
-# Generate and copy icon
-bash scripts/generate-icon.sh
-if [ -f AppIcon.icns ]; then
-    install -m0644 AppIcon.icns "${RESOURCES_DIR}/AppIcon.icns"
-fi
-
-# Ad-hoc code sign
-codesign --force --sign - "${APP_DIR}"
+# Copy the .app bundle to PREFIX
+APP_DIR="${PREFIX}/lib/agentpulse"
+mkdir -p "${APP_DIR}"
+cp -R build/AgentPulse.app "${APP_DIR}/"
 
 # Install menuinst shortcut
 mkdir -p "${PREFIX}/Menu"

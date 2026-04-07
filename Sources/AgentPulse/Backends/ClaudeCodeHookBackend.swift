@@ -7,8 +7,9 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     let iconName = "terminal"
 
     /// Sessions tracked via hook events. Key = sessionId.
+    /// Access serialized through the syncQueue.
     private var trackedSessions: [String: TrackedSession] = [:]
-    private let lock = NSLock()
+    private let syncQueue = DispatchQueue(label: "hook-backend-sync")
 
     struct TrackedSession {
         let id: String
@@ -21,8 +22,12 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
 
     /// Called by the HookServer when a hook event arrives.
     func handleEvent(_ event: HookEvent) {
-        lock.lock()
-        defer { lock.unlock() }
+        syncQueue.sync {
+            _handleEvent(event)
+        }
+    }
+
+    private func _handleEvent(_ event: HookEvent) {
 
         let sessionId = event.sessionId
         let state = mapEventToState(event)
@@ -84,9 +89,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     // MARK: - AgentBackend
 
     func discoverSessions() async throws -> [DiscoveredSession] {
-        lock.lock()
-        let sessions = Array(trackedSessions.values)
-        lock.unlock()
+        let sessions = syncQueue.sync { Array(trackedSessions.values) }
 
         return sessions.compactMap { tracked in
             guard ProcessProbe.isAlive(pid: tracked.pid) || tracked.pid == 0 else {
@@ -105,9 +108,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     }
 
     func analyzeState(for session: DiscoveredSession) async throws -> SessionState {
-        lock.lock()
-        let state = trackedSessions[session.id]?.state ?? .idle
-        lock.unlock()
+        let state = syncQueue.sync { trackedSessions[session.id]?.state ?? .idle }
         return state
     }
 
@@ -121,10 +122,10 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
 
     /// Remove dead sessions.
     func pruneDeadSessions() {
-        lock.lock()
-        trackedSessions = trackedSessions.filter { _, session in
-            session.pid == 0 || ProcessProbe.isAlive(pid: session.pid)
+        syncQueue.sync {
+            trackedSessions = trackedSessions.filter { _, session in
+                session.pid == 0 || ProcessProbe.isAlive(pid: session.pid)
+            }
         }
-        lock.unlock()
     }
 }
