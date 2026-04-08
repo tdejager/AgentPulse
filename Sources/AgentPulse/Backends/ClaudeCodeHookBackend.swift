@@ -213,13 +213,44 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
         return false
     }
 
+    /// Read the current sessionId recorded in ~/.claude/sessions/<pid>.json.
+    /// Returns nil if the file is missing or unparseable.
+    private func currentSessionId(forPid pid: Int32) -> String? {
+        let path = NSHomeDirectory() + "/.claude/sessions/\(pid).json"
+        guard let data = FileManager.default.contents(atPath: path),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sid = json["sessionId"] as? String
+        else { return nil }
+        return sid
+    }
+
+    /// Decide whether a tracked session is still valid. A pid can outlive a
+    /// session (e.g. `/clear` creates a new sessionId in the same Claude Code
+    /// process), so being alive is not enough — the session file for that pid
+    /// must still point at our sessionId.
+    private func isStillCurrent(_ session: TrackedSession) -> Bool {
+        if session.pid == 0 {
+            // Pre-hook discovery: rely on the session file existing anywhere.
+            return hasSessionFile(session.id)
+        }
+        guard ProcessProbe.isAlive(pid: session.pid) else {
+            // Dead pid — only keep if the file still exists (rare race).
+            return hasSessionFile(session.id)
+        }
+        // Alive pid — must still be the session the file points at. A missing
+        // file means the process is alive but Claude Code hasn't (re)written
+        // the marker yet; keep the entry rather than dropping prematurely.
+        if let current = currentSessionId(forPid: session.pid) {
+            return current == session.id
+        }
+        return true
+    }
+
     /// Remove sessions that have no live process and no session file on disk.
     private func pruneOrphanedSessions() {
         syncQueue.sync {
             trackedSessions = trackedSessions.filter { _, session in
-                if ProcessProbe.isAlive(pid: session.pid) { return true }
-                // No live process — only keep if there's a real session file
-                return hasSessionFile(session.id)
+                isStillCurrent(session)
             }
         }
     }
@@ -228,7 +259,7 @@ final class ClaudeCodeHookBackend: AgentBackend, @unchecked Sendable {
     func pruneDeadSessions() {
         syncQueue.sync {
             trackedSessions = trackedSessions.filter { _, session in
-                ProcessProbe.isAlive(pid: session.pid) || hasSessionFile(session.id)
+                isStillCurrent(session)
             }
         }
     }
